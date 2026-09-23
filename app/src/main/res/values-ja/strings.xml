@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Walletアート</string>
+    <string name="app_description">Google ウォレットの券面画像をこの端末上でカスタマイズします。</string>
+    <string name="screen_title">Wallet カードアート</string>
+    <string name="cards_heading">カード</string>
+    <string name="cards_supporting">カードごとに券面画像を設定できます。変更は表示だけに適用されます。</string>
+    <string name="refresh_cards">カード一覧を更新</string>
+    <string name="network_card">カード</string>
+    <string name="generic_wallet_card">Google Wallet カード</string>
+    <string name="wallet_card_alias">Walletカード · %1$s</string>
+    <string name="no_cards_title">カードがまだ見つかりません</string>
+    <string name="no_cards_message">Google Walletを一度開いてから、このアプリに戻ってください。</string>
+    <string name="original_preview">元の券面</string>
+    <string name="custom_preview">カスタム</string>
+    <string name="artwork_preview_description">%1$sの券面プレビュー</string>
+    <string name="select_image">画像を選択</string>
+    <string name="reset">リセット</string>
+    <string name="custom_art_active">カスタム画像を適用中</string>
+    <string name="wallet_art_active">Walletの券面を使用中</string>
+    <string name="fit_mode">画像の配置</string>
+    <string name="fit_center">全体を表示</string>
+    <string name="center_crop">カードいっぱいに表示</string>
+    <string name="center_inside">中央に配置</string>
+    <string name="crop_title">カード比率で切り抜き</string>
+    <string name="crop_cancel">切り抜きをキャンセル</string>
+    <string name="crop_instructions">ドラッグで位置を調整し、ピンチまたはスライダーで拡大します。</string>
+    <string name="crop_preview_description">券面画像の切り抜きプレビュー</string>
+    <string name="crop_zoom">拡大率</string>
+    <string name="crop_zoom_percent">%1$d%%</string>
+    <string name="crop_save">切り抜きを保存</string>
+    <string name="image_format_error">PNG、JPEG、WebP画像を選択してください。</string>
+    <string name="image_size_error">画像サイズは32 MiB以内にしてください。</string>
+    <string name="image_decode_error">この画像を読み込めませんでした。</string>
+    <string name="crop_save_error">切り抜きを保存できませんでした。もう一度お試しください。</string>
+    <plurals name="cards_count">
+        <item quantity="other">%1$d件</item>
+    </plurals>
+</resources>

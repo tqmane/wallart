@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wallet Art</string>
+    <string name="app_description">Personalize Google Wallet card artwork on this device.</string>
+    <string name="screen_title">Wallet card art</string>
+    <string name="cards_heading">Your cards</string>
+    <string name="cards_supporting">Choose an image for each detected card. Changes are visual only.</string>
+    <string name="refresh_cards">Refresh cards</string>
+    <string name="network_card">Card</string>
+    <string name="generic_wallet_card">Google Wallet card</string>
+    <string name="wallet_card_alias">Wallet card · %1$s</string>
+    <string name="no_cards_title">No cards detected yet</string>
+    <string name="no_cards_message">Open Google Wallet once, then return here to personalize a card artwork.</string>
+    <string name="original_preview">Original</string>
+    <string name="custom_preview">Custom</string>
+    <string name="artwork_preview_description">%1$s artwork preview</string>
+    <string name="select_image">Select image</string>
+    <string name="reset">Reset</string>
+    <string name="custom_art_active">Custom artwork is active</string>
+    <string name="wallet_art_active">Wallet artwork is active</string>
+    <string name="fit_mode">Fit mode</string>
+    <string name="fit_center">Fit center</string>
+    <string name="center_crop">Fill and crop</string>
+    <string name="center_inside">Center inside</string>
+    <string name="crop_title">Crop to card</string>
+    <string name="crop_cancel">Cancel crop</string>
+    <string name="crop_instructions">Drag to position. Pinch or use the slider to zoom.</string>
+    <string name="crop_preview_description">Card artwork crop preview</string>
+    <string name="crop_zoom">Zoom</string>
+    <string name="crop_zoom_percent">%1$d%%</string>
+    <string name="crop_save">Save crop</string>
+    <string name="image_format_error">Choose a PNG, JPEG, or WebP image.</string>
+    <string name="image_size_error">Image is larger than 32 MiB.</string>
+    <string name="image_decode_error">This image could not be decoded.</string>
+    <string name="crop_save_error">Could not save the crop. Please try again.</string>
+    <plurals name="cards_count">
+        <item quantity="one">%1$d card</item>
+        <item quantity="other">%1$d cards</item>
+    </plurals>
+</resources>

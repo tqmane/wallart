@@ -1,0 +1,3 @@
+-keep class com.tqmane.wallart.xposed.** { *; }
+-keep class com.tqmane.wallart.storage.** { *; }
+-keep class com.tqmane.wallart.CardIdentity { *; }
