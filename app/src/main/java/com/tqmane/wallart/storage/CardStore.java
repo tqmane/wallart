@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.util.Log;
 
 import com.tqmane.wallart.BuildConfig;
 import com.tqmane.wallart.FitMode;
@@ -188,6 +189,19 @@ public final class CardStore {
 
     public static void clearPendingSelection(Context context) {
         prefs(context).edit().remove(PENDING_ID).remove(PENDING_AT).apply();
+    }
+
+    public static void grantTargetUriAccess(Context context) {
+        Uri root = Uri.parse("content://" + AUTHORITY + "/");
+        int flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION;
+        for (String target : new String[] {WALLET_PACKAGE, GOOGLE_PAY_PACKAGE}) {
+            try {
+                context.grantUriPermission(target, root, flags);
+            } catch (RuntimeException error) {
+                Log.w("WallArt", "Could not grant artwork provider access to " + target, error);
+            }
+        }
     }
 
     public static boolean setPendingGmsLink(Context context, String id, String label) {

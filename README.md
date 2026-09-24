@@ -25,7 +25,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 1. APKを通常のアプリとしてインストールします。
 2. LSPosed/VectorでWallArtを有効にします。WalletとGMSのscopeはAPKに固定されています。
-3. WallArtを一度開き、WalletとGMS Pay UIへのローカル画像読み取り権限を付与します。
+3. 初回インストール後にWallArtを一度開き、WalletとGMS Pay UIへのローカル画像読み取り権限を付与します。以後は端末起動時とWallArt更新後に自動で再付与します。
 4. Walletを開いて券面を検出し、WallArtで対象カードの画像を選択します。Photo Picker後にカード比率の切り抜きを調整できます。
 5. 表示済み画面を更新するには、対象アプリをforce-stopしてから再度開きます。端末再起動は不要です。
 

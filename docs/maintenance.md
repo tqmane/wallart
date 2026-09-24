@@ -10,6 +10,8 @@ Windows/PowerShellとAndroid SDK 37を使います。
 
 端末へ更新する場合は `adb install -r app\build\outputs\apk\debug\app-debug.apk` を使います。`-r` はアプリ専用データを保持します。モジュールやscopeを反映するときは対象アプリだけを `adb shell am force-stop <package>` して再度起動してください。端末再起動は不要です。
 
+Wallet/GMSからProviderを解決できるよう、WallArtはURI prefixのread権限を付与します。Androidはこの付与を端末再起動時に失効させるため、`ProviderAccessReceiver`が`BOOT_COMPLETED`と`MY_PACKAGE_REPLACED`で再付与します。初回インストール後だけはWallArtを一度起動してください。`Failed to find provider info for com.tqmane.wallart.provider` が出た場合は、`adb shell dumpsys activity permissions`で両パッケージへのURI grantを確認してください。
+
 ## 構成
 
 - `xposed/WalletDiscovery.java`: DEXを列挙し、券面Drawable・Composeカードスタック・お気に入りタイルを型とメソッド形状で探索します。難読クラス名をhook条件として固定しません。
