@@ -43,3 +43,7 @@ Wallet `26.37.981219770` のホームカードとSuica/QUICPayお気に入り券
 ## セキュリティ境界
 
 WallArt changes only the local visual representation of card artwork. It does not modify payment credentials, NFC/HCE, TapAndPay, authentication, attestation, Google Play Integrity, root detection, or payment decisions.
+
+## License
+
+Copyright (C) 2026 tqmane. Licensed under [GPL-3.0-only](LICENSE).
