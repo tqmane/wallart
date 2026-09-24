@@ -32,6 +32,22 @@ public final class CardIdentity {
         return resolvedId == null ? null : new CardIdentity(resolvedId, displayName, network, lastFour, lookupFingerprints);
     }
 
+    public CardIdentity withStableKeyParts(List<String> parts) {
+        if (parts == null || parts.isEmpty()) return this;
+        ArrayList<String> fingerprints = new ArrayList<>();
+        Collections.addAll(fingerprints, lookupFingerprints);
+        addStableKeyFingerprints(fingerprints, String.join("\u001f", parts));
+        return new CardIdentity(id, displayName, network, lastFour, fingerprints.toArray(new String[0]));
+    }
+
+    public String gmsLinkKey(String action) {
+        ArrayList<String> fingerprints = new ArrayList<>();
+        Collections.addAll(fingerprints, lookupFingerprints);
+        Collections.sort(fingerprints);
+        return sha256("gms-detail-link\u001f" + (action == null ? "" : action) + "\u001f" + id
+                + "\u001f" + String.join("\u001f", fingerprints));
+    }
+
     public static CardIdentity fromModel(Object model) {
         if (model == null) return null;
         try {
@@ -72,7 +88,8 @@ public final class CardIdentity {
         for (String value : rawStrings) {
             if (value != null && !value.isEmpty()) strings.add(value);
         }
-        if (strings.isEmpty() && (artworkUri == null || artworkUri.isEmpty())) return null;
+        if (strings.isEmpty() && (artworkUri == null || artworkUri.isEmpty())
+                && (stableKey == null || stableKey.isEmpty())) return null;
         String lastFour = findLastFour(strings);
         String network = networkName(networkCode, strings);
         String label = mask(selectLabel(strings), lastFour);
@@ -94,11 +111,13 @@ public final class CardIdentity {
                     : "Wallet card · " + alias.toUpperCase(Locale.ROOT);
             label = fallback;
         }
-        return new CardIdentity(id, label, network, lastFour, lookupFingerprints(network, lastFour, stableArtwork));
+        return new CardIdentity(id, label, network, lastFour,
+                lookupFingerprints(network, lastFour, stableArtwork, stableKey, strings, label));
     }
 
-    private static String[] lookupFingerprints(String network, String lastFour, String artUri) {
-        ArrayList<String> result = new ArrayList<>(4);
+    private static String[] lookupFingerprints(String network, String lastFour, String artUri,
+            String stableKey, List<String> labels, String label) {
+        ArrayList<String> result = new ArrayList<>(8);
         if (!artUri.isEmpty()) {
             if (lastFour != null) result.add(sha256("art-url-last4\u001f" + artUri + "\u001f" + lastFour));
             result.add(sha256("art-url\u001f" + artUri));
@@ -107,7 +126,46 @@ public final class CardIdentity {
         if ("Suica".equals(network) || "QUICPay".equals(network)) {
             result.add(sha256("wallet-card-type\u001f" + network));
         }
+        addStableKeyFingerprints(result, stableKey);
+        addLabelFingerprint(result, label);
+        for (String value : labels) {
+            if (result.size() >= 12) break;
+            addLabelFingerprint(result, value);
+        }
         return result.toArray(new String[0]);
+    }
+
+    private static void addStableKeyFingerprints(List<String> fingerprints, String stableKey) {
+        if (stableKey == null) return;
+        int added = 0;
+        for (String part : stableKey.split("\u001f")) {
+            if (part.length() < 12 || part.length() > 128 || part.startsWith("http")
+                    || part.chars().anyMatch(Character::isWhitespace)) continue;
+            boolean hasLetter = part.codePoints().anyMatch(Character::isLetter);
+            boolean hasDigit = part.codePoints().anyMatch(Character::isDigit);
+            if (!hasLetter || !hasDigit) continue;
+            Matcher digits = DIGITS.matcher(part);
+            boolean looksLikeNumber = false;
+            while (digits.find()) if (digits.group().length() >= 8) looksLikeNumber = true;
+            if (looksLikeNumber) continue;
+            String fingerprint = sha256("wallet-stable-component\u001f" + part);
+            if (!fingerprints.contains(fingerprint)) {
+                fingerprints.add(fingerprint);
+                if (++added == 16) break;
+            }
+        }
+    }
+
+    private static void addLabelFingerprint(List<String> fingerprints, String value) {
+        if (value == null || value.isEmpty() || value.length() > 128 || value.startsWith("http")
+                || value.codePoints().noneMatch(Character::isLetter)) return;
+        Matcher digits = DIGITS.matcher(value);
+        while (digits.find()) if (digits.group().length() >= 8) return;
+        String normalized = value.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
+        if (!normalized.isEmpty()) {
+            String fingerprint = sha256("card-label\u001f" + normalized);
+            if (!fingerprints.contains(fingerprint)) fingerprints.add(fingerprint);
+        }
     }
 
     static String findLastFour(List<String> values) {

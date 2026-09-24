@@ -20,6 +20,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -43,6 +44,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CreditCard
@@ -51,6 +53,7 @@ import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -64,10 +67,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -98,6 +103,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -124,6 +130,9 @@ class MainActivity : ComponentActivity() {
     private var refreshCards: (() -> Unit)? = null
     private var pendingCardId: String? = null
     private var pendingCrop by mutableStateOf<PendingCrop?>(null)
+    private var pendingGmsLink by mutableStateOf<CardStore.PendingGmsLink?>(null)
+    private var showGmsLinkDialog by mutableStateOf(false)
+    private var returnToGmsAfterLink = false
 
     private val picker = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         val cardId = pendingCardId ?: return@registerForActivityResult
@@ -168,12 +177,35 @@ class MainActivity : ComponentActivity() {
                 Log.w("WallArt", "Could not grant target app access to the local provider", error)
             }
         }
+        handleGmsLinkIntent(intent)
         enableEdgeToEdge()
         setContent {
             WallArtTheme {
                 WallArtScreen(
                     pendingCrop = pendingCrop,
+                    pendingGmsLink = pendingGmsLink,
+                    showGmsLinkDialog = showGmsLinkDialog,
                     onRegisterRefresh = { refreshCards = it },
+                    onOpenGmsLinkDialog = { showGmsLinkDialog = true },
+                    onDismissGmsLinkDialog = {
+                        showGmsLinkDialog = false
+                        returnToGmsAfterLink = false
+                    },
+                    onLinkGmsCard = { gmsId, cardId ->
+                        val linked = CardStore.linkGmsCard(this, gmsId, cardId)
+                        if (linked) {
+                            pendingGmsLink = CardStore.pendingGmsLink(this)
+                            showGmsLinkDialog = false
+                            refreshCards?.invoke()
+                            if (returnToGmsAfterLink) {
+                                returnToGmsAfterLink = false
+                                finish()
+                            }
+                        } else {
+                            Toast.makeText(this, getString(R.string.gms_link_error), Toast.LENGTH_LONG).show()
+                        }
+                        linked
+                    },
                     onSelectImage = { cardId ->
                         pendingCardId = cardId
                         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -219,8 +251,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun handleGmsLinkIntent(intent: Intent?) {
+        pendingGmsLink = CardStore.pendingGmsLink(this)
+        showGmsLinkDialog = intent?.getBooleanExtra(CardStore.EXTRA_OPEN_GMS_LINK, false) == true
+                && pendingGmsLink != null
+        returnToGmsAfterLink = showGmsLinkDialog
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleGmsLinkIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
+        pendingGmsLink = CardStore.pendingGmsLink(this)
         refreshCards?.invoke()
     }
 
@@ -259,7 +305,12 @@ private fun WallArtTheme(content: @Composable () -> Unit) {
 @Composable
 private fun WallArtScreen(
     pendingCrop: PendingCrop?,
+    pendingGmsLink: CardStore.PendingGmsLink?,
+    showGmsLinkDialog: Boolean,
     onRegisterRefresh: (((() -> Unit)?) -> Unit),
+    onOpenGmsLinkDialog: () -> Unit,
+    onDismissGmsLinkDialog: () -> Unit,
+    onLinkGmsCard: (String, String) -> Boolean,
     onSelectImage: (String) -> Unit,
     onCancelCrop: () -> Unit,
     onSaveCrop: (PendingCrop, Bitmap) -> Unit,
@@ -353,6 +404,52 @@ private fun WallArtScreen(
                             )
                         }
                     }
+                    pendingGmsLink?.let { link ->
+                        val linkedCard = cards.firstOrNull { it.id == link.linkedCardId }
+                        ElevatedCard(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                            shape = MaterialTheme.shapes.extraLarge,
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            ),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Icon(
+                                    Icons.Outlined.CreditCard,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        stringResource(R.string.gms_link_banner_title),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                    Text(
+                                        if (linkedCard == null) {
+                                            stringResource(R.string.gms_link_banner_supporting, link.label)
+                                        } else {
+                                            stringResource(
+                                                R.string.gms_link_banner_linked,
+                                                link.label,
+                                                linkedCard.label,
+                                            )
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                }
+                                Button(onClick = onOpenGmsLinkDialog, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text(stringResource(R.string.gms_link_open))
+                                }
+                            }
+                        }
+                    }
                     if (expanded) {
                         LazyVerticalGrid(
                             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -386,6 +483,137 @@ private fun WallArtScreen(
             onCancel = onCancelCrop,
             onSave = { cropped -> onSaveCrop(source, cropped) },
         )
+    }
+    if (showGmsLinkDialog && pendingGmsLink != null) {
+        GmsCardLinkDialog(
+            link = pendingGmsLink,
+            cards = cards,
+            onDismiss = onDismissGmsLinkDialog,
+            onLink = onLinkGmsCard,
+        )
+    }
+}
+
+@Composable
+private fun GmsCardLinkDialog(
+    link: CardStore.PendingGmsLink,
+    cards: List<CardStore.Card>,
+    onDismiss: () -> Unit,
+    onLink: (String, String) -> Boolean,
+) {
+    val linkableCards = remember(cards) { cards.filter { it.hasCustomArt() } }
+    var selectedCardId by remember(link.id, link.linkedCardId) { mutableStateOf(link.linkedCardId) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Outlined.CreditCard, contentDescription = null) },
+        title = { Text(stringResource(R.string.gms_link_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    stringResource(R.string.gms_link_dialog_supporting, link.label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (linkableCards.isEmpty()) {
+                    Text(
+                        stringResource(R.string.gms_link_no_custom_cards),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(linkableCards, key = { it.id }) { card ->
+                            GmsLinkCardOption(card, selectedCardId == card.id) {
+                                selectedCardId = card.id
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { selectedCardId?.let { onLink(link.id, it) } },
+                enabled = selectedCardId != null && linkableCards.any { it.id == selectedCardId },
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text(stringResource(R.string.gms_link_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.gms_link_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun GmsLinkCardOption(card: CardStore.Card, selected: Boolean, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val bitmap by produceState<Bitmap?>(null, card.id, card.extension) {
+        value = withContext(Dispatchers.IO) {
+            BitmapDecoder.decodeFile(File(CardStore.artDir(context), "${card.id}.${card.extension}"))
+        }
+    }
+    val label = when {
+        card.label == "Google Wallet card" -> stringResource(R.string.generic_wallet_card)
+        card.label.startsWith("Wallet card · ") -> stringResource(
+            R.string.wallet_card_alias,
+            card.label.substringAfter('·').trim(),
+        )
+        else -> card.label
+    }
+    val network = if (card.network == "Card") stringResource(R.string.network_card) else card.network
+    val shape = MaterialTheme.shapes.large
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .border(
+                1.dp,
+                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                shape,
+            ),
+        shape = shape,
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap!!.asImageBitmap(),
+                    contentDescription = stringResource(R.string.gms_link_preview_description, label),
+                    modifier = Modifier.size(width = 76.dp, height = 48.dp).clip(MaterialTheme.shapes.small),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.size(width = 76.dp, height = 48.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.CreditCard, contentDescription = null)
+                    }
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    network + (card.lastFour?.let { "  •••• $it" } ?: ""),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            RadioButton(selected = selected, onClick = null)
+        }
     }
 }
 

@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.widget.ImageView;
 import androidx.annotation.RequiresApi;
 
@@ -28,6 +29,9 @@ import io.github.libxposed.api.XposedModuleInterface;
 
 public final class WalletModule extends XposedModule {
     private static final String TAG = "WallArt";
+    private static final String GMS_CARD_DETAIL_ACTION =
+            "com.google.android.gms.pay.secard.view.detail.VIEW_SE_MFI_PREPAID_CARD_DETAIL";
+    private static final String GMS_FOP_DETAIL_ACTION = "com.google.android.gms.pay.fops.VIEW_FOP";
     private final Set<ClassLoader> hookedClassLoaders = Collections.newSetFromMap(new WeakHashMap<>());
     private final Set<Method> composeCardHooks = Collections.newSetFromMap(new WeakHashMap<>());
     private final Set<Method> composeImageHooks = Collections.newSetFromMap(new WeakHashMap<>());
@@ -37,6 +41,7 @@ public final class WalletModule extends XposedModule {
     private final AtomicBoolean activityCreateHookInstalled = new AtomicBoolean();
     private final AtomicBoolean activityHookInstalled = new AtomicBoolean();
     private final AtomicBoolean activityPauseHookInstalled = new AtomicBoolean();
+    private final AtomicBoolean walletTouchHookInstalled = new AtomicBoolean();
     private final AtomicBoolean drawableDrawSeen = new AtomicBoolean();
 
     static {
@@ -49,8 +54,9 @@ public final class WalletModule extends XposedModule {
         log(Log.INFO, TAG, "Loaded in " + param.getProcessName());
         if (isWalletProcess(param.getProcessName())) {
             ClassLoader loader = walletClassLoader();
-            if (loader != null) installFor(com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE, loader);
+            if (loader != null) installFor(loader);
             hookActivityResumeFallback();
+            hookWalletSelectionFallback();
             if (!hasHooks()) hookApplicationAttach();
         } else if (isGooglePlayServicesProcess(param.getProcessName())) {
             hookActivityCreateFallback();
@@ -66,14 +72,15 @@ public final class WalletModule extends XposedModule {
                 + System.identityHashCode(param.getDefaultClassLoader()));
         if (com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE.equals(param.getPackageName())) {
             hookActivityResumeFallback();
-            installFor(param.getPackageName(), param.getDefaultClassLoader());
+            hookWalletSelectionFallback();
+            installFor(param.getDefaultClassLoader());
         } else if (com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(param.getPackageName())) {
             hookActivityCreateFallback();
             hookActivityResumeFallback();
             hookActivityPauseFallback();
         } else if (isWalletProcess(null)) {
             ClassLoader loader = walletClassLoader();
-            if (loader != null) installFor(com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE, loader);
+            if (loader != null) installFor(loader);
             if (!hasHooks()) hookActivityResumeFallback();
         }
     }
@@ -84,14 +91,15 @@ public final class WalletModule extends XposedModule {
                 + System.identityHashCode(param.getClassLoader()));
         if (com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE.equals(param.getPackageName())) {
             hookActivityResumeFallback();
-            installFor(param.getPackageName(), param.getClassLoader());
+            hookWalletSelectionFallback();
+            installFor(param.getClassLoader());
         } else if (com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(param.getPackageName())) {
             hookActivityCreateFallback();
             hookActivityResumeFallback();
             hookActivityPauseFallback();
         } else if (isWalletProcess(null)) {
             ClassLoader loader = walletClassLoader();
-            if (loader != null) installFor(com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE, loader);
+            if (loader != null) installFor(loader);
             if (!hasHooks()) hookActivityResumeFallback();
         }
     }
@@ -124,9 +132,11 @@ public final class WalletModule extends XposedModule {
     }
 
     private boolean isGooglePayDetailActivity(Activity activity) {
-        return activity != null
-                && com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(activity.getPackageName())
-                && activity.getClass().getName().endsWith(".pay.main.PayActivity");
+        if (activity == null
+                || !com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(activity.getPackageName())
+                || !activity.getClass().getName().endsWith(".pay.main.PayActivity")) return false;
+        String action = activity.getIntent() == null ? null : activity.getIntent().getAction();
+        return GMS_CARD_DETAIL_ACTION.equals(action) || GMS_FOP_DETAIL_ACTION.equals(action);
     }
 
     private void hookActivityCreateFallback() {
@@ -142,10 +152,11 @@ public final class WalletModule extends XposedModule {
                         Object receiver = chain.getThisObject();
                         Activity activity = receiver instanceof Activity ? (Activity) receiver : null;
                         boolean target = isGooglePayDetailActivity(activity);
-                        if (target) CardArtRuntime.onGooglePayActivityStarted(activity);
+                        if (target) {
+                            log(Log.INFO, TAG, "GMS PayActivity entered");
+                            CardArtRuntime.onGooglePayActivityStarted(activity);
+                        }
                         Object result = chain.proceed();
-                        if (target) installFor(com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE,
-                                activity.getClassLoader());
                         return result;
                     });
             Log.i(TAG, "Pay detail activity creation fallback installed");
@@ -230,7 +241,7 @@ public final class WalletModule extends XposedModule {
                             Context context = (Context) chain.getArg(0);
                             if (com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE.equals(context.getPackageName())) {
                                 CardArtRuntime.onWalletActivityResumed(context);
-                                installFor(context.getPackageName(), context.getClassLoader());
+                                installFor(context.getClassLoader());
                             }
                         } catch (Throwable error) {
                             Log.w(TAG, "Application attach fallback failed", error);
@@ -261,11 +272,10 @@ public final class WalletModule extends XposedModule {
                                 Activity activity = (Activity) receiver;
                                 if (com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE.equals(activity.getPackageName())) {
                                     CardArtRuntime.onWalletActivityResumed(activity);
-                                    installFor(activity.getPackageName(), activity.getClassLoader());
+                                    installFor(activity.getClassLoader());
                                 } else if (isGooglePayDetailActivity(activity)) {
-                                    CardArtRuntime.onGooglePayActivityStarted(activity);
-                                    installFor(com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE,
-                                            activity.getClassLoader());
+                                    log(Log.INFO, TAG, "GMS PayActivity resumed");
+                                    CardArtRuntime.onGooglePayActivityResumed(activity);
                                 }
                             }
                         } catch (Throwable error) {
@@ -277,6 +287,39 @@ public final class WalletModule extends XposedModule {
         } catch (Throwable error) {
             activityHookInstalled.set(false);
             Log.e(TAG, "Cannot install Activity resume fallback", error);
+        }
+    }
+
+    private void hookWalletSelectionFallback() {
+        if (!walletTouchHookInstalled.compareAndSet(false, true)) return;
+        try {
+            Method dispatchTouchEvent = Activity.class.getDeclaredMethod("dispatchTouchEvent", MotionEvent.class);
+            dispatchTouchEvent.setAccessible(true);
+            hook(dispatchTouchEvent)
+                    .setPriority(XposedInterface.PRIORITY_DEFAULT)
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .setId("wallet-card-selection-bridge")
+                    .intercept(chain -> {
+                        Object receiver = chain.getThisObject();
+                        Object argument = chain.getArg(0);
+                        if (receiver instanceof Activity && argument instanceof MotionEvent) {
+                            Activity activity = (Activity) receiver;
+                            MotionEvent event = (MotionEvent) argument;
+                            if (com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE.equals(activity.getPackageName())
+                                    && event.getActionMasked() == MotionEvent.ACTION_UP) {
+                                try {
+                                    CardArtRuntime.captureWalletCardSelection(activity, event.getRawX(), event.getRawY());
+                                } catch (Throwable error) {
+                                    Log.w(TAG, "Wallet card selection capture skipped", error);
+                                }
+                            }
+                        }
+                        return chain.proceed();
+                    });
+            Log.i(TAG, "Wallet card-selection bridge installed");
+        } catch (Throwable error) {
+            walletTouchHookInstalled.set(false);
+            Log.w(TAG, "Wallet card-selection bridge unavailable", error);
         }
     }
 
@@ -308,10 +351,8 @@ public final class WalletModule extends XposedModule {
         }
     }
 
-    private void installFor(String packageName, ClassLoader classLoader) {
-        boolean wallet = com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE.equals(packageName);
-        boolean googlePay = com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(packageName);
-        if ((!wallet && !googlePay) || classLoader == null) return;
+    private void installFor(ClassLoader classLoader) {
+        if (classLoader == null) return;
         synchronized (hookedClassLoaders) {
             if (hookedClassLoaders.contains(classLoader)) return;
         }
@@ -321,8 +362,9 @@ public final class WalletModule extends XposedModule {
             WalletDiscovery.Discovery discovery = WalletDiscovery.discover(classLoader);
             if (discovery.drawableRenderers.isEmpty() && discovery.composeStackRenderers.isEmpty()
                     && discovery.composeTileRenderers.isEmpty()) {
-                Log.w(TAG, "Card-art renderers not found; original Wallet behavior is unchanged");
-                log(Log.WARN, TAG, "Card-art renderers not found; original Wallet behavior is unchanged");
+                String message = "Card-art renderers not found; original app behavior is unchanged";
+                Log.w(TAG, message);
+                log(Log.WARN, TAG, message);
                 return;
             }
             for (Method method : discovery.drawableRenderers) {

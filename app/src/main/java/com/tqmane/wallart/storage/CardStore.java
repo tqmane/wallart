@@ -28,6 +28,12 @@ public final class CardStore {
     public static final String METHOD_RECORD = "record_card";
     public static final String METHOD_RESOLVE = "resolve_art";
     public static final String METHOD_RESOLVE_IDENTITY = "resolve_identity";
+    public static final String METHOD_SET_PENDING_SELECTION = "set_pending_selection";
+    public static final String METHOD_RESOLVE_PENDING_SELECTION = "resolve_pending_selection";
+    public static final String METHOD_CLEAR_PENDING_SELECTION = "clear_pending_selection";
+    public static final String METHOD_SET_PENDING_GMS_LINK = "set_pending_gms_link";
+    public static final String METHOD_RESOLVE_GMS_LINK = "resolve_gms_link";
+    public static final String EXTRA_OPEN_GMS_LINK = "com.tqmane.wallart.OPEN_GMS_LINK";
     public static final String METHOD_RECORD_ORIGINAL = "record_original_preview";
     public static final String KEY_ID = "id";
     public static final String KEY_LABEL = "label";
@@ -42,12 +48,21 @@ public final class CardStore {
     public static final String KEY_RESOLVED_ID = "resolved_id";
     public static final String KEY_PREVIEW = "preview";
     public static final String KEY_STORED = "stored";
+    public static final String KEY_GMS_ID = "gms_id";
 
     private static final String PREFS = "cards";
     private static final String IDS = "ids";
+    private static final String PENDING_ID = "pending_detail_card_id";
+    private static final String PENDING_AT = "pending_detail_card_at";
+    private static final String PENDING_GMS_ID = "pending_gms_link_id";
+    private static final String PENDING_GMS_LABEL = "pending_gms_link_label";
+    private static final String PENDING_GMS_AT = "pending_gms_link_at";
+    private static final String GMS_LINK_PREFIX = "gms_link.";
     private static final String PREFIX = "card.";
     private static final String[] EXTENSIONS = {"png", "jpg", "webp"};
     private static final int MAX_PREVIEW_BYTES = 512 * 1024;
+    private static final long PENDING_SELECTION_TIMEOUT_MS = 15_000L;
+    private static final long PENDING_GMS_LINK_TIMEOUT_MS = 30L * 60L * 1000L;
 
     private CardStore() {
     }
@@ -87,6 +102,18 @@ public final class CardStore {
             this.uri = Uri.parse("content://" + AUTHORITY + "/art/" + file.getName().substring(0, file.getName().lastIndexOf('.')));
             this.fit = fit;
             this.revision = revision;
+        }
+    }
+
+    public static final class PendingGmsLink {
+        public final String id;
+        public final String label;
+        public final String linkedCardId;
+
+        PendingGmsLink(String id, String label, String linkedCardId) {
+            this.id = id;
+            this.label = label;
+            this.linkedCardId = linkedCardId;
         }
     }
 
@@ -136,6 +163,74 @@ public final class CardStore {
             if (!ambiguous && match != null) return match;
         }
         return null;
+    }
+
+    public static boolean setPendingSelection(Context context, String id) {
+        SharedPreferences prefs = prefs(context);
+        Card card = read(context, prefs, id);
+        if (card == null || !card.hasCustomArt()) return false;
+        prefs.edit().putString(PENDING_ID, id).putLong(PENDING_AT, System.currentTimeMillis()).apply();
+        return true;
+    }
+
+    public static String pendingSelection(Context context) {
+        SharedPreferences prefs = prefs(context);
+        String id = prefs.getString(PENDING_ID, null);
+        if (id == null) return null;
+        long age = System.currentTimeMillis() - prefs.getLong(PENDING_AT, 0L);
+        Card card = read(context, prefs, id);
+        if (age < 0 || age > PENDING_SELECTION_TIMEOUT_MS || card == null || !card.hasCustomArt()) {
+            clearPendingSelection(context);
+            return null;
+        }
+        return id;
+    }
+
+    public static void clearPendingSelection(Context context) {
+        prefs(context).edit().remove(PENDING_ID).remove(PENDING_AT).apply();
+    }
+
+    public static boolean setPendingGmsLink(Context context, String id, String label) {
+        if (!isValidId(id)) return false;
+        boolean hasCustomArt = false;
+        for (Card card : list(context)) {
+            if (card.hasCustomArt()) {
+                hasCustomArt = true;
+                break;
+            }
+        }
+        if (!hasCustomArt) return false;
+        prefs(context).edit().putString(PENDING_GMS_ID, id)
+                .putString(PENDING_GMS_LABEL, cleanLabel(label))
+                .putLong(PENDING_GMS_AT, System.currentTimeMillis()).apply();
+        return true;
+    }
+
+    public static PendingGmsLink pendingGmsLink(Context context) {
+        SharedPreferences prefs = prefs(context);
+        String id = prefs.getString(PENDING_GMS_ID, null);
+        long age = System.currentTimeMillis() - prefs.getLong(PENDING_GMS_AT, 0L);
+        if (!isValidId(id) || age < 0 || age > PENDING_GMS_LINK_TIMEOUT_MS) {
+            prefs.edit().remove(PENDING_GMS_ID).remove(PENDING_GMS_LABEL).remove(PENDING_GMS_AT).apply();
+            return null;
+        }
+        return new PendingGmsLink(id, fallback(prefs.getString(PENDING_GMS_LABEL, ""), "Google Pay card"),
+                resolveGmsLink(context, id));
+    }
+
+    public static boolean linkGmsCard(Context context, String gmsId, String cardId) {
+        Card card = read(context, cardId);
+        if (!isValidId(gmsId) || card == null || !card.hasCustomArt()) return false;
+        prefs(context).edit().putString(GMS_LINK_PREFIX + gmsId, cardId).apply();
+        return true;
+    }
+
+    public static String resolveGmsLink(Context context, String gmsId) {
+        if (!isValidId(gmsId)) return null;
+        SharedPreferences prefs = prefs(context);
+        String cardId = prefs.getString(GMS_LINK_PREFIX + gmsId, null);
+        Card card = read(context, cardId);
+        return card != null && card.hasCustomArt() ? cardId : null;
     }
 
     public static List<Card> list(Context context) {

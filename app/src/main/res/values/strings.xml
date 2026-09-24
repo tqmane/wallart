@@ -33,6 +33,17 @@
     <string name="image_size_error">Image is larger than 32 MiB.</string>
     <string name="image_decode_error">This image could not be decoded.</string>
     <string name="crop_save_error">Could not save the crop. Please try again.</string>
+    <string name="gms_link_banner_title">Google Pay card needs a link</string>
+    <string name="gms_link_banner_supporting">%1$s is waiting to be linked to a Wallet card.</string>
+    <string name="gms_link_banner_linked">%1$s is linked to %2$s. You can change it.</string>
+    <string name="gms_link_open">Choose card</string>
+    <string name="gms_link_dialog_title">Link Google Pay card</string>
+    <string name="gms_link_dialog_supporting">Google Pay showed %1$s. Choose the Wallet card whose custom artwork should appear here.</string>
+    <string name="gms_link_no_custom_cards">No Wallet cards have custom artwork yet.</string>
+    <string name="gms_link_preview_description">Custom artwork for %1$s</string>
+    <string name="gms_link_confirm">Link card</string>
+    <string name="gms_link_cancel">Cancel</string>
+    <string name="gms_link_error">Could not save this link. Choose a card with custom artwork and try again.</string>
     <plurals name="cards_count">
         <item quantity="one">%1$d card</item>
         <item quantity="other">%1$d cards</item>

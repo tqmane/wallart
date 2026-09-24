@@ -34,6 +34,37 @@ public final class CardArtProvider extends ContentProvider {
             if (id != null) result.putString(CardStore.KEY_RESOLVED_ID, id);
             return result;
         }
+        if (CardStore.METHOD_SET_PENDING_SELECTION.equals(method)) {
+            Bundle result = new Bundle();
+            result.putBoolean(CardStore.KEY_STORED,
+                    CardStore.setPendingSelection(getContext(), value(extras, CardStore.KEY_ID)));
+            return result;
+        }
+        if (CardStore.METHOD_RESOLVE_PENDING_SELECTION.equals(method)) {
+            Bundle result = new Bundle();
+            String id = CardStore.pendingSelection(getContext());
+            if (id != null) result.putString(CardStore.KEY_RESOLVED_ID, id);
+            return result;
+        }
+        if (CardStore.METHOD_CLEAR_PENDING_SELECTION.equals(method)) {
+            CardStore.clearPendingSelection(getContext());
+            return Bundle.EMPTY;
+        }
+        if (CardStore.METHOD_SET_PENDING_GMS_LINK.equals(method)) {
+            requireGooglePayCaller();
+            Bundle result = new Bundle();
+            result.putBoolean(CardStore.KEY_STORED,
+                    CardStore.setPendingGmsLink(getContext(), value(extras, CardStore.KEY_GMS_ID),
+                            value(extras, CardStore.KEY_LABEL)));
+            return result;
+        }
+        if (CardStore.METHOD_RESOLVE_GMS_LINK.equals(method)) {
+            requireGooglePayCaller();
+            Bundle result = new Bundle();
+            String id = CardStore.resolveGmsLink(getContext(), value(extras, CardStore.KEY_GMS_ID));
+            if (id != null) result.putString(CardStore.KEY_RESOLVED_ID, id);
+            return result;
+        }
         if (CardStore.METHOD_RECORD_ORIGINAL.equals(method)) {
             Bundle result = new Bundle();
             result.putBoolean(CardStore.KEY_STORED, CardStore.recordOriginalPreview(
@@ -94,6 +125,13 @@ public final class CardArtProvider extends ContentProvider {
         String caller = getCallingPackage();
         if (!CardStore.WALLET_PACKAGE.equals(caller) && !CardStore.GOOGLE_PAY_PACKAGE.equals(caller)) {
             throw new SecurityException("WallArt provider is private to its app, Wallet, and the approved Pay UI");
+        }
+    }
+
+    private void requireGooglePayCaller() {
+        if (Binder.getCallingUid() != Process.myUid()
+                && !CardStore.GOOGLE_PAY_PACKAGE.equals(getCallingPackage())) {
+            throw new SecurityException("Only Google Pay may read or stage a detail-card link");
         }
     }
 

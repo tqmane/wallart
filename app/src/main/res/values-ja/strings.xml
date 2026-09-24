@@ -33,6 +33,17 @@
     <string name="image_size_error">画像サイズは32 MiB以内にしてください。</string>
     <string name="image_decode_error">この画像を読み込めませんでした。</string>
     <string name="crop_save_error">切り抜きを保存できませんでした。もう一度お試しください。</string>
+    <string name="gms_link_banner_title">Google Payカードが未連携です</string>
+    <string name="gms_link_banner_supporting">%1$sの詳細画面に表示するWalletカードを選んでください。</string>
+    <string name="gms_link_banner_linked">%1$sは%2$sにリンク済みです。変更できます。</string>
+    <string name="gms_link_open">カードを選ぶ</string>
+    <string name="gms_link_dialog_title">Google Payカードを関連付け</string>
+    <string name="gms_link_dialog_supporting">詳細画面: %1$s。表示したいカスタム券面のWalletカードを選んでください。決済情報は変更されません。</string>
+    <string name="gms_link_no_custom_cards">カスタム画像を設定したWalletカードがありません。</string>
+    <string name="gms_link_preview_description">%1$sのカスタム券面</string>
+    <string name="gms_link_confirm">このカードにリンク</string>
+    <string name="gms_link_cancel">キャンセル</string>
+    <string name="gms_link_error">リンクを保存できませんでした。カスタム画像があるカードを選び、もう一度お試しください。</string>
     <plurals name="cards_count">
         <item quantity="other">%1$d件</item>
     </plurals>
