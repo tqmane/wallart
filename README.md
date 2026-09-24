@@ -1,77 +1,79 @@
-# Wallet Art
+# WallArt
 
-Google Walletのカード券面をカードごとにカスタマイズする、Material 3 ExpressiveのLSPosedモジュールです。画像は端末内に保存し、決済データやNFC動作には触れません。
+**English** | [日本語](README.ja.md)
 
-## スクリーンショット
+An LSPosed module to customize card artwork in Google Wallet on a per-card basis, featuring a Material 3 Expressive interface. Images are stored locally and never interfere with payment data or NFC operations.
 
-### WallArt 設定アプリ (Material 3 Expressive)
+## Screenshots
 
-カードごとに券面画像をプレビューしながら、選択・切り抜き・配置モードを直感的に設定できます。
+### WallArt Manager App (Material 3 Expressive)
+
+Preview, select, crop, and configure fit modes for each detected card with ease.
 
 <p align="center">
-  <img src="docs/images/wallart-app-1.png" width="31%" alt="WallArt 設定画面 1" />
-  <img src="docs/images/wallart-app-2.png" width="31%" alt="WallArt 設定画面 2" />
-  <img src="docs/images/wallart-crop.png" width="31%" alt="カード比率で切り抜き" />
+  <img src="docs/images/wallart-app-1.png" width="31%" alt="WallArt Manager Screen 1" />
+  <img src="docs/images/wallart-app-2.png" width="31%" alt="WallArt Manager Screen 2" />
+  <img src="docs/images/wallart-crop.png" width="31%" alt="Crop to card ratio" />
 </p>
 
 <p align="center">
-  <sub>左・中央: WallArt 設定アプリ ｜ 右: カード規格（12dp角丸）の切り抜きエディタ</sub>
+  <sub>Left & Center: WallArt Manager ｜ Right: Standard card ratio (12dp corner radius) crop editor</sub>
 </p>
 
-### Google Wallet での表示例
+### Google Wallet Showcase
 
-ホーム画面のメインカードやショートカットタイル、各カードの詳細画面まで美しいカスタム券面が反映されます。
+Custom artwork seamlessly reflects across the carousel, shortcut tiles, and detailed card views.
 
 <p align="center">
-  <img src="docs/images/wallet-home.png" width="23%" alt="Google Wallet ホーム画面" />
-  <img src="docs/images/wallet-suica.png" width="23%" alt="Suica 詳細画面" />
-  <img src="docs/images/wallet-debit.png" width="23%" alt="デビットカード 詳細画面" />
-  <img src="docs/images/wallet-card-view.png" width="23%" alt="カード全画面表示" />
+  <img src="docs/images/wallet-home.png" width="23%" alt="Google Wallet Home" />
+  <img src="docs/images/wallet-suica.png" width="23%" alt="Suica Details" />
+  <img src="docs/images/wallet-debit.png" width="23%" alt="Debit Card Details" />
+  <img src="docs/images/wallet-card-view.png" width="23%" alt="Full Card View" />
 </p>
 
 <p align="center">
-  <sub>左から: Google Wallet ホーム ｜ Suica 詳細 ｜ デビットカード詳細 (みんなの銀行) ｜ カード全画面表示</sub>
+  <sub>Left to right: Google Wallet Home ｜ Suica Details ｜ Debit Card Details (Minna no Ginko) ｜ Manage payment method view</sub>
 </p>
 
-## 対応範囲
+## Compatibility
 
-- Wallet: `com.google.android.apps.walletnfcrel` — `26.37.981219770`
-- GMSカード詳細とタップ確認: `PayActivity` のカード詳細アクション、および `TapActivity` / `TAP_EVENT` の表示券面だけを置換（GMS scopeが必要）。タップ確認はWallet側の選択情報・表示ラベルでカードを照合し、決済処理には介入しません。
-- LSPosed Modern API: 102+
-- 設定アプリ: 日本語・英語。Android 13以降のアプリごとの言語設定にも対応。
+- **Google Wallet**: `com.google.android.apps.walletnfcrel` — `26.37.981219770`
+- **GMS Card Details & Tap Confirmation**: Replaces visual artwork in `PayActivity` and `TapActivity` / `TAP_EVENT` (requires GMS scope). Card matching is performed against Wallet selection data and labels; payment execution is untouched.
+- **LSPosed Modern API**: 102+
+- **Manager App**: English & Japanese, with support for per-app language settings (Android 13+).
 
-WalletとGMSは静的scopeとしてAPKに同梱します。GMSはプロセス単位でscopeに入りますが、実行時フックは対象のPayActivityに限定し、Google Play servicesの他の画面・決済処理には適用しません。
+Wallet and GMS packages are defined as static scopes in the APK. Hook execution in GMS is strictly confined to `PayActivity` and never touches other Google Play services screens or payment processes.
 
-## ビルド
+## Build
 
-Android SDK 37を設定し、PowerShellから実行します。
+Requires Android SDK 37. Run via PowerShell:
 
 ```powershell
 .\gradlew.bat testDebugUnitTest assembleDebug --no-daemon --max-workers=1
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`
+APK output: `app/build/outputs/apk/debug/app-debug.apk`
 
-## インストール
+## Installation
 
-1. APKを通常のアプリとしてインストールします。
-2. LSPosed/VectorでWallArtを有効にします。WalletとGMSのscopeはAPKに固定されています。
-3. 初回インストール後にWallArtを一度開き、WalletとGMS Pay UIへのローカル画像読み取り権限を付与します。以後は端末起動時とWallArt更新後に自動で再付与します。
-4. Walletを開いて券面を検出し、WallArtで対象カードの画像を選択します。Photo Picker後にカード比率の切り抜きを調整できます。
-5. 表示済み画面を更新するには、対象アプリをforce-stopしてから再度開きます。端末再起動は不要です。
+1. Install the APK normally.
+2. Enable WallArt in LSPosed / Vector (scopes for Wallet and GMS are fixed in the APK).
+3. Open WallArt once to grant local image read permission to Wallet and GMS Pay UI. Permissions are automatically renewed on boot and app updates.
+4. Open Google Wallet once to detect registered cards, then return to WallArt to set custom artwork. Crop to card ratio via the Photo Picker.
+5. Force-stop the target app and reopen it to apply changes. No system reboot required.
 
-PNG/JPEG/WebPに対応しています。画像はアプリ専用ストレージへコピーし、Resetで元の券面に戻します。元画像プレビューはWallet自身の描画結果、または認証情報・クエリのない公開Google画像URLからローカルに作成します。URLそのものは保存しません。
+Supports PNG, JPEG, and WebP. Images are stored in app-private storage, and the Reset button restores original artwork at any time.
 
-## 保守
+## Documentation
 
-- [docs/research.md](docs/research.md): 対象APKの解析根拠とGMS詳細画面の境界
-- [docs/maintenance.md](docs/maintenance.md): モジュール構成、scope、検証、更新手順
+- [docs/research.md](docs/research.md): Target APK analysis and GMS boundaries
+- [docs/maintenance.md](docs/maintenance.md): Architecture, scopes, verification, and update guides
 
-## 既知の検証状況
+## Verified Environments
 
-Wallet `26.37.981219770` のホームカード、Suica/QUICPayお気に入り券面、GMSカード詳細はNothing A059 / Android 17で確認済みです。タップ確認画面は `TapActivity` の正確なクラス名と `TAP_EVENT` アクションに限定した券面描画を追加しましたが、実際の決済を発生させる検証はしていません。
+- Google Wallet `26.37.981219770` (Home cards, Suica/QUICPay favorite tiles, GMS card details) verified on Nothing Phone (A059) / Android 17.
 
-## セキュリティ境界
+## Security Boundary
 
 WallArt changes only the local visual representation of card artwork. It does not modify payment credentials, NFC/HCE, TapAndPay, authentication, attestation, Google Play Integrity, root detection, or payment decisions.
 
