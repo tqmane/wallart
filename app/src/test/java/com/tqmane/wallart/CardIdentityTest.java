@@ -25,12 +25,12 @@ public final class CardIdentityTest {
     @Test
     public void stableKeyWinsWhenWalletLabelOrArtworkChanges() {
         CardIdentity first = CardIdentity.fromStableKey("instrument-opaque-key",
-                Arrays.asList("Visa •••• 1234", "1234567890123456"), "https://example/one");
+                Arrays.asList("Visa •••• 1234", "123456"), "https://example/one");
         CardIdentity second = CardIdentity.fromStableKey("instrument-opaque-key",
                 Arrays.asList("Visa •••• 9876"), "https://example/two");
         assertEquals(first.id, second.id);
         assertEquals("1234", first.lastFour);
-        assertTrue(!first.displayName.contains("1234567890123456"));
+        assertTrue(!first.displayName.contains("123456"));
         assertNotEquals(first.id, CardIdentity.fromStableKey("another-key",
                 Arrays.asList("Visa •••• 1234"), "https://example/one").id);
     }
@@ -53,6 +53,18 @@ public final class CardIdentityTest {
         assertEquals("Suica", suica.displayName);
         assertEquals("QUICPay", quickPay.network);
         assertEquals("QUICPay", quickPay.displayName);
+    }
+
+    @Test
+    public void tapScreenTransitLabelsMatchWalletCardsByType() {
+        CardIdentity walletSuica = CardIdentity.fromStableKey("wallet-suica", Arrays.asList("Suica"), null);
+        CardIdentity tapSuica = CardIdentity.fromStableKey(null, Arrays.asList("Suica"), null);
+        CardIdentity walletQuickPay = CardIdentity.fromStableKey("wallet-quickpay", Arrays.asList("QUICPay"), null);
+        CardIdentity tapQuickPay = CardIdentity.fromStableKey(null, Arrays.asList("QUICPay"), null);
+
+        assertEquals(walletSuica.lookupFingerprints[0], tapSuica.lookupFingerprints[0]);
+        assertEquals(walletQuickPay.lookupFingerprints[0], tapQuickPay.lookupFingerprints[0]);
+        assertNotEquals(tapSuica.lookupFingerprints[0], tapQuickPay.lookupFingerprints[0]);
     }
 
     @Test
@@ -100,17 +112,18 @@ public final class CardIdentityTest {
     }
 
     @Test
-    public void gmsLinkKeyIsStableForTheSameDetailAndScopedToItsAction() {
+    public void gmsLinkKeyIsStableAcrossLabelOrderAndChangesWithCardIdentity() {
         CardIdentity first = CardIdentity.fromStableKey(null,
                 Arrays.asList("Olive Visa •••• 1234", "Debit card"), null);
         CardIdentity reordered = CardIdentity.fromStableKey(null,
                 Arrays.asList("Debit card", "Olive Visa •••• 1234"), null);
+        CardIdentity different = CardIdentity.fromStableKey(null,
+                Arrays.asList("Olive Visa •••• 5678", "Debit card"), null);
 
-        String key = first.gmsLinkKey("com.google.android.gms.pay.secard.view.detail.VIEW_SE_MFI_PREPAID_CARD_DETAIL");
+        String key = first.gmsLinkKey();
         assertTrue(key.matches("[0-9a-f]{64}"));
-        assertEquals(key, reordered.gmsLinkKey(
-                "com.google.android.gms.pay.secard.view.detail.VIEW_SE_MFI_PREPAID_CARD_DETAIL"));
-        assertNotEquals(key, first.gmsLinkKey("com.google.android.gms.pay.fops.VIEW_FOP"));
+        assertEquals(key, reordered.gmsLinkKey());
+        assertNotEquals(key, different.gmsLinkKey());
     }
 
     @Test

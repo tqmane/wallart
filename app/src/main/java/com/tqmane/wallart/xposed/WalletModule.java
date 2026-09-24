@@ -32,6 +32,8 @@ public final class WalletModule extends XposedModule {
     private static final String GMS_CARD_DETAIL_ACTION =
             "com.google.android.gms.pay.secard.view.detail.VIEW_SE_MFI_PREPAID_CARD_DETAIL";
     private static final String GMS_FOP_DETAIL_ACTION = "com.google.android.gms.pay.fops.VIEW_FOP";
+    private static final String GMS_TAP_ACTIVITY_CLASS = "com.google.android.gms.tapandpay.tap.TapActivity";
+    private static final String GMS_TAP_ACTION = "com.google.android.gms.tapandpay.tap.TAP_EVENT";
     private final Set<ClassLoader> hookedClassLoaders = Collections.newSetFromMap(new WeakHashMap<>());
     private final Set<Method> composeCardHooks = Collections.newSetFromMap(new WeakHashMap<>());
     private final Set<Method> composeImageHooks = Collections.newSetFromMap(new WeakHashMap<>());
@@ -139,6 +141,18 @@ public final class WalletModule extends XposedModule {
         return GMS_CARD_DETAIL_ACTION.equals(action) || GMS_FOP_DETAIL_ACTION.equals(action);
     }
 
+    private boolean isGooglePayTapConfirmationActivity(Activity activity) {
+        return activity != null
+                && com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(activity.getPackageName())
+                && GMS_TAP_ACTIVITY_CLASS.equals(activity.getClass().getName())
+                && activity.getIntent() != null
+                && GMS_TAP_ACTION.equals(activity.getIntent().getAction());
+    }
+
+    private boolean isGooglePayArtworkActivity(Activity activity) {
+        return isGooglePayDetailActivity(activity) || isGooglePayTapConfirmationActivity(activity);
+    }
+
     private void hookActivityCreateFallback() {
         if (!activityCreateHookInstalled.compareAndSet(false, true)) return;
         try {
@@ -151,9 +165,10 @@ public final class WalletModule extends XposedModule {
                     .intercept(chain -> {
                         Object receiver = chain.getThisObject();
                         Activity activity = receiver instanceof Activity ? (Activity) receiver : null;
-                        boolean target = isGooglePayDetailActivity(activity);
+                        boolean target = isGooglePayArtworkActivity(activity);
                         if (target) {
-                            log(Log.INFO, TAG, "GMS PayActivity entered");
+                            log(Log.INFO, TAG, isGooglePayTapConfirmationActivity(activity)
+                                    ? "GMS tap confirmation activity entered" : "GMS PayActivity entered");
                             CardArtRuntime.onGooglePayActivityStarted(activity);
                         }
                         Object result = chain.proceed();
@@ -273,6 +288,9 @@ public final class WalletModule extends XposedModule {
                                 if (com.tqmane.wallart.storage.CardStore.WALLET_PACKAGE.equals(activity.getPackageName())) {
                                     CardArtRuntime.onWalletActivityResumed(activity);
                                     installFor(activity.getClassLoader());
+                                } else if (isGooglePayTapConfirmationActivity(activity)) {
+                                    log(Log.INFO, TAG, "GMS tap confirmation activity resumed");
+                                    CardArtRuntime.onGooglePayTapActivityResumed(activity);
                                 } else if (isGooglePayDetailActivity(activity)) {
                                     log(Log.INFO, TAG, "GMS PayActivity resumed");
                                     CardArtRuntime.onGooglePayActivityResumed(activity);
@@ -336,7 +354,7 @@ public final class WalletModule extends XposedModule {
                         Object result = chain.proceed();
                         try {
                             Object receiver = chain.getThisObject();
-                            if (receiver instanceof Activity && isGooglePayDetailActivity((Activity) receiver)) {
+                            if (receiver instanceof Activity && isGooglePayArtworkActivity((Activity) receiver)) {
                                 CardArtRuntime.onGooglePayActivityStopped();
                             }
                         } catch (Throwable error) {

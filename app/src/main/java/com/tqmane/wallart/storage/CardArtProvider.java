@@ -43,6 +43,11 @@ public final class CardArtProvider extends ContentProvider {
         if (CardStore.METHOD_RESOLVE_PENDING_SELECTION.equals(method)) {
             Bundle result = new Bundle();
             String id = CardStore.pendingSelection(getContext());
+            String network = value(extras, CardStore.KEY_NETWORK);
+            if (id != null && network != null) {
+                CardStore.Card card = CardStore.read(getContext(), id);
+                if (card == null || !network.equals(card.network)) id = null;
+            }
             if (id != null) result.putString(CardStore.KEY_RESOLVED_ID, id);
             return result;
         }

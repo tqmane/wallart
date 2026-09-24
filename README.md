@@ -5,7 +5,7 @@ Google Walletのカード券面をカードごとにカスタマイズする、M
 ## 対応範囲
 
 - Wallet: `com.google.android.apps.walletnfcrel` — `26.37.981219770`
-- Suica詳細: `com.google.android.gms` の `com.google.android.gms.pay.main.PayActivity` のみ（GMS scopeを追加した場合）
+- GMSカード詳細とタップ確認: `PayActivity` のカード詳細アクション、および `TapActivity` / `TAP_EVENT` の表示券面だけを置換（GMS scopeが必要）。タップ確認はWallet側の選択情報・表示ラベルでカードを照合し、決済処理には介入しません。
 - LSPosed Modern API: 102+
 - 設定アプリ: 日本語・英語。Android 13以降のアプリごとの言語設定にも対応。
 
@@ -38,7 +38,7 @@ PNG/JPEG/WebPに対応しています。画像はアプリ専用ストレージ�
 
 ## 既知の検証状況
 
-Wallet `26.37.981219770` のホームカードとSuica/QUICPayお気に入り券面はNothing A059 / Android 17で確認済みです。GMS Pay詳細の端末実描画確認は、更新APKを入れてscope反映後に実施します（端末上のGMS version: `26.34.65`）。
+Wallet `26.37.981219770` のホームカード、Suica/QUICPayお気に入り券面、GMSカード詳細はNothing A059 / Android 17で確認済みです。タップ確認画面は `TapActivity` の正確なクラス名と `TAP_EVENT` アクションに限定した券面描画を追加しましたが、実際の決済を発生させる検証はしていません。
 
 ## セキュリティ境界
 

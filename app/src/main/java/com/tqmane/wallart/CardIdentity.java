@@ -40,12 +40,11 @@ public final class CardIdentity {
         return new CardIdentity(id, displayName, network, lastFour, fingerprints.toArray(new String[0]));
     }
 
-    public String gmsLinkKey(String action) {
+    public String gmsLinkKey() {
         ArrayList<String> fingerprints = new ArrayList<>();
         Collections.addAll(fingerprints, lookupFingerprints);
         Collections.sort(fingerprints);
-        return sha256("gms-detail-link\u001f" + (action == null ? "" : action) + "\u001f" + id
-                + "\u001f" + String.join("\u001f", fingerprints));
+        return sha256("gms-card-link\u001f" + id + "\u001f" + String.join("\u001f", fingerprints));
     }
 
     public static CardIdentity fromModel(Object model) {

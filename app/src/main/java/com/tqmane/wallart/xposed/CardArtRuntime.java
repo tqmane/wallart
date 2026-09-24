@@ -182,7 +182,12 @@ final class CardArtRuntime {
     static void onGooglePayActivityResumed(Activity activity) {
         onGooglePayActivityStarted(activity);
         logGooglePayIntentKeys(activity);
-        scheduleGooglePayArtwork(activity, 0);
+        scheduleGooglePayArtwork(activity, 0, false);
+    }
+
+    static void onGooglePayTapActivityResumed(Activity activity) {
+        onGooglePayActivityStarted(activity);
+        scheduleGooglePayArtwork(activity, 0, true);
     }
 
     private static void logGooglePayIntentKeys(Activity activity) {
@@ -209,14 +214,14 @@ final class CardArtRuntime {
         }
     }
 
-    private static void scheduleGooglePayArtwork(Activity activity, int attempt) {
+    private static void scheduleGooglePayArtwork(Activity activity, int attempt, boolean tapConfirmation) {
         if (!googlePayDetailActive || googlePayActivity.get() != activity
                 || activity.isFinishing() || activity.isDestroyed()) return;
         View decor = activity.getWindow().getDecorView();
         View artView = findCardArtworkView(decor, decor.getWidth(), decor.getHeight());
         if (artView == null) {
             if (com.tqmane.wallart.BuildConfig.DEBUG) Log.i(TAG, "GMS detail card-art view scan missed; retrying");
-            if (attempt < 8) decor.postDelayed(() -> scheduleGooglePayArtwork(activity, attempt + 1), 250L);
+            if (attempt < 8) decor.postDelayed(() -> scheduleGooglePayArtwork(activity, attempt + 1, tapConfirmation), 250L);
             else if (com.tqmane.wallart.BuildConfig.DEBUG) Log.i(TAG, "GMS detail card-art view not found");
             return;
         }
@@ -229,7 +234,7 @@ final class CardArtRuntime {
                 artLocation[0] + artWidth, artLocation[1] + artHeight, labels);
         CardIdentity candidate = CardIdentity.fromStableKey(null, labels, null);
         if (candidate == null) {
-            if (attempt < 8) decor.postDelayed(() -> scheduleGooglePayArtwork(activity, attempt + 1), 250L);
+            if (attempt < 8) decor.postDelayed(() -> scheduleGooglePayArtwork(activity, attempt + 1, tapConfirmation), 250L);
             else if (com.tqmane.wallart.BuildConfig.DEBUG) Log.i(TAG, "GMS detail card label not found");
             return;
         }
@@ -241,10 +246,10 @@ final class CardArtRuntime {
 
         EXECUTOR.execute(() -> {
             try {
-                CardIdentity identity = resolveGooglePayIdentity(activity, candidate, labels);
+                CardIdentity identity = resolveGooglePayIdentity(activity, candidate, labels, !tapConfirmation);
                 if (identity == null) {
-                    if (attempt < 4) retryGooglePayArtwork(activity, attempt);
-                    else {
+                    if (attempt < 4) retryGooglePayArtwork(activity, attempt, tapConfirmation);
+                    else if (!tapConfirmation) {
                         if (com.tqmane.wallart.BuildConfig.DEBUG) Log.i(TAG,
                                 "GMS detail card did not match a saved Wallet card");
                         offerManualGooglePayLink(activity, candidate);
@@ -285,10 +290,11 @@ final class CardArtRuntime {
         });
     }
 
-    private static CardIdentity resolveGooglePayIdentity(Activity activity, CardIdentity candidate, List<String> labels) {
+    private static CardIdentity resolveGooglePayIdentity(Activity activity, CardIdentity candidate, List<String> labels,
+            boolean allowIntentParsing) {
         CardIdentity identity = resolveExistingIdentity(activity, candidate);
         if (identity != null) return identity;
-        String gmsLinkId = candidate.gmsLinkKey(activity.getIntent().getAction());
+        String gmsLinkId = candidate.gmsLinkKey();
         try {
             Bundle values = new Bundle();
             values.putString(CardStore.KEY_GMS_ID, gmsLinkId);
@@ -301,6 +307,7 @@ final class CardArtRuntime {
             }
         } catch (Throwable ignored) {
         }
+        if (!allowIntentParsing) return resolvePendingSelection(activity, candidate, true);
         Bundle extras = activity.getIntent().getExtras();
         if (extras == null) return null;
         int checked = 0;
@@ -340,9 +347,20 @@ final class CardArtRuntime {
             if (identity != null) return identity;
             if (++checked == 8) break;
         }
+        return resolvePendingSelection(activity, candidate, false);
+    }
+
+    private static CardIdentity resolvePendingSelection(Activity activity, CardIdentity candidate,
+            boolean requireNetworkMatch) {
         try {
+            Bundle values = null;
+            if (requireNetworkMatch) {
+                if ("Card".equals(candidate.network)) return null;
+                values = new Bundle();
+                values.putString(CardStore.KEY_NETWORK, candidate.network);
+            }
             Bundle pending = activity.getContentResolver().call(Uri.parse("content://" + CardStore.AUTHORITY),
-                    CardStore.METHOD_RESOLVE_PENDING_SELECTION, null, null);
+                    CardStore.METHOD_RESOLVE_PENDING_SELECTION, null, values);
             String id = pending == null ? null : pending.getString(CardStore.KEY_RESOLVED_ID);
             if (CardStore.isValidId(id)) {
                 if (com.tqmane.wallart.BuildConfig.DEBUG) Log.i(TAG,
@@ -361,7 +379,7 @@ final class CardArtRuntime {
         boolean stored = false;
         try {
             Bundle values = new Bundle();
-            values.putString(CardStore.KEY_GMS_ID, candidate.gmsLinkKey(activity.getIntent().getAction()));
+            values.putString(CardStore.KEY_GMS_ID, candidate.gmsLinkKey());
             values.putString(CardStore.KEY_LABEL, candidate.displayName);
             Bundle result = activity.getContentResolver().call(Uri.parse("content://" + CardStore.AUTHORITY),
                     CardStore.METHOD_SET_PENDING_GMS_LINK, null, values);
@@ -497,9 +515,9 @@ final class CardArtRuntime {
         return tokens;
     }
 
-    private static void retryGooglePayArtwork(Activity activity, int attempt) {
+    private static void retryGooglePayArtwork(Activity activity, int attempt, boolean tapConfirmation) {
         View decor = activity.getWindow().getDecorView();
-        decor.postDelayed(() -> scheduleGooglePayArtwork(activity, attempt + 1), 250L);
+        decor.postDelayed(() -> scheduleGooglePayArtwork(activity, attempt + 1, tapConfirmation), 250L);
     }
 
     static void onGooglePayActivityStopped() {
@@ -708,7 +726,8 @@ final class CardArtRuntime {
 
     private static View findCardArtworkView(View view, int screenWidth, int screenHeight) {
         View best = null;
-        if (isComposeView(view) && view.isShown() && view.getWidth() >= screenWidth * 0.7f
+        if ((isComposeView(view) || view instanceof ImageView) && view.isShown()
+                && view.getWidth() >= screenWidth * 0.7f
                 && view.getHeight() >= screenHeight * 0.2f && view.getHeight() <= screenHeight * 0.4f) {
             float ratio = (float) view.getWidth() / view.getHeight();
             int[] location = new int[2];
