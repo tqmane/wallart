@@ -47,4 +47,13 @@
     <plurals name="cards_count">
         <item quantity="other">%1$d件</item>
     </plurals>
+    <string name="open_wallet">Google ウォレットを開く</string>
+    <string name="add_custom_art">画像を設定</string>
+    <string name="change_image">画像を変更</string>
+    <string name="fit_label_fit">全体</string>
+    <string name="fit_label_crop">拡大</string>
+    <string name="fit_label_inside">中央</string>
+    <string name="adjust_crop">切り抜きを調整</string>
+    <string name="custom_count_badge">%1$d/%2$d件 適用中</string>
+    <string name="empty_open_wallet">ウォレットを開いてカードを同期</string>
 </resources>

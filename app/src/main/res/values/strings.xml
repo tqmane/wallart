@@ -48,4 +48,13 @@
         <item quantity="one">%1$d card</item>
         <item quantity="other">%1$d cards</item>
     </plurals>
+    <string name="open_wallet">Open Google Wallet</string>
+    <string name="add_custom_art">Add image</string>
+    <string name="change_image">Change image</string>
+    <string name="fit_label_fit">Fit</string>
+    <string name="fit_label_crop">Crop</string>
+    <string name="fit_label_inside">Inside</string>
+    <string name="adjust_crop">Adjust crop</string>
+    <string name="custom_count_badge">%1$d of %2$d active</string>
+    <string name="empty_open_wallet">Open Wallet to sync cards</string>
 </resources>
