@@ -2,6 +2,37 @@
 
 Google Walletのカード券面をカードごとにカスタマイズする、Material 3 ExpressiveのLSPosedモジュールです。画像は端末内に保存し、決済データやNFC動作には触れません。
 
+## スクリーンショット
+
+### WallArt 設定アプリ (Material 3 Expressive)
+
+カードごとに券面画像をプレビューしながら、選択・切り抜き・配置モードを直感的に設定できます。
+
+<p align="center">
+  <img src="docs/images/wallart-app-1.png" width="31%" alt="WallArt 設定画面 1" />
+  <img src="docs/images/wallart-app-2.png" width="31%" alt="WallArt 設定画面 2" />
+  <img src="docs/images/wallart-crop.png" width="31%" alt="カード比率で切り抜き" />
+</p>
+
+<p align="center">
+  <sub>左・中央: WallArt 設定アプリ ｜ 右: カード規格（12dp角丸）の切り抜きエディタ</sub>
+</p>
+
+### Google Wallet での表示例
+
+ホーム画面のメインカードやショートカットタイル、各カードの詳細画面まで美しいカスタム券面が反映されます。
+
+<p align="center">
+  <img src="docs/images/wallet-home.png" width="23%" alt="Google Wallet ホーム画面" />
+  <img src="docs/images/wallet-suica.png" width="23%" alt="Suica 詳細画面" />
+  <img src="docs/images/wallet-debit.png" width="23%" alt="デビットカード 詳細画面" />
+  <img src="docs/images/wallet-card-view.png" width="23%" alt="カード全画面表示" />
+</p>
+
+<p align="center">
+  <sub>左から: Google Wallet ホーム ｜ Suica 詳細 ｜ デビットカード詳細 (みんなの銀行) ｜ カード全画面表示</sub>
+</p>
+
 ## 対応範囲
 
 - Wallet: `com.google.android.apps.walletnfcrel` — `26.37.981219770`
