@@ -12,14 +12,14 @@ import static org.junit.Assert.assertTrue;
 public final class CardIdentityTest {
     @Test
     public void keepsOnlyMaskedLastFourAndStableHash() {
-        CardIdentity first = CardIdentity.create(4, Arrays.asList("Visa •••• 1234", "1234567890123456"), "https://example/card?sig=one");
-        CardIdentity second = CardIdentity.create(4, Arrays.asList("Visa •••• 1234", "1234567890123456"), "https://example/card?sig=two");
-        CardIdentity different = CardIdentity.create(4, Arrays.asList("Visa •••• 5678", "9876543210985678"), "https://example/card");
+        CardIdentity first = CardIdentity.create(4, Arrays.asList("Visa •••• 1234", "123456"), "https://example/card?sig=one");
+        CardIdentity second = CardIdentity.create(4, Arrays.asList("Visa •••• 1234", "123456"), "https://example/card?sig=two");
+        CardIdentity different = CardIdentity.create(4, Arrays.asList("Visa •••• 5678", "987654"), "https://example/card");
         assertEquals(first.id, second.id);
         assertNotEquals(first.id, different.id);
         assertEquals("1234", first.lastFour);
         assertTrue(first.displayName.contains("1234"));
-        assertTrue(!first.displayName.contains("1234567890123456"));
+        assertTrue(!first.displayName.contains("123456"));
     }
 
     @Test
