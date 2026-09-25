@@ -38,11 +38,11 @@ Custom artwork seamlessly reflects across the carousel, shortcut tiles, and deta
 ## Compatibility
 
 - **Google Wallet**: `com.google.android.apps.walletnfcrel` — `26.37.981219770`
-- **GMS Card Details & Tap Confirmation**: Replaces visual artwork in `PayActivity` and `TapActivity` / `TAP_EVENT` (requires GMS scope). Card matching is performed against Wallet selection data and labels; payment execution is untouched.
+- **GMS Card Details & Tap Confirmation**: Replaces visual artwork in the exact `PayActivity` detail actions and `TapActivity` / `TAP_EVENT` (requires GMS scope). Hooks run only in `com.google.android.gms.ui`; the main GMS/HCE process is left unhooked.
 - **LSPosed Modern API**: 102+
 - **Manager App**: English & Japanese, with support for per-app language settings (Android 13+).
 
-Wallet and GMS packages are defined as static scopes in the APK. Hook execution in GMS is strictly confined to `PayActivity` and never touches other Google Play services screens or payment processes.
+Wallet and GMS packages are defined as static scopes in the APK. In GMS, Activity hooks run only in the observed `.ui` process and validate exact card-detail or tap-confirmation actions. TapAndPay, HCE, and NFC services are not hooked.
 
 ## Build
 

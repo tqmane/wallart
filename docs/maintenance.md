@@ -15,7 +15,7 @@ Wallet/GMSからProviderを解決できるよう、WallArtはURI prefixのread�
 ## 構成
 
 - `xposed/WalletDiscovery.java`: DEXを列挙し、券面Drawable・Composeカードスタック・お気に入りタイルを型とメソッド形状で探索します。難読クラス名をhook条件として固定しません。
-- `xposed/WalletModule.java`: Walletと、明示的なカード詳細アクション、および正確な `TapActivity` / `TAP_EVENT` の組み合わせだけを対象にします。他のGMS画面では元の表示を通します。タップ確認ではIntentを解析せず、表示中の券種または直前のWallet選択だけで照合します。
+- `xposed/WalletModule.java`: GMSではログで確認した `com.google.android.gms.ui` プロセスだけにActivityフックを設置し、正確なカード詳細アクションと `TapActivity` / `TAP_EVENT` のみを対象にします。メインGMS/HCEプロセスにはActivityフックを入れません。
 - `xposed/CardArtRuntime.java`: カード文脈と描画を結び、設定画像を読み込みます。元画像はWalletのDrawableまたは許可済みの公開画像から端末内プレビューを作ります。
 - `CardIdentity.java`: stable IDをSHA-256化し、異なるプロセス間の一致用fingerprintもハッシュだけで保持します。完全なPAN、URL、認証情報は設定・ログに保存しません。
 - `storage/CardStore.java` / `CardArtProvider.java`: 設定と画像をアプリ専用領域に保存し、Wallet/GMSからはread-onlyで読み取れるようにします。呼び出し元の許可パッケージはscope変更時に確認してください。
@@ -26,7 +26,7 @@ Wallet/GMSからProviderを解決できるよう、WallArtはURI prefixのread�
 - `app/src/main/resources/META-INF/xposed/scope.list` は `staticScope=true` なので選択式ではありません。
 - 固定scope: `com.google.android.apps.walletnfcrel`, `com.google.android.gms`
 
-GMS scopeはパッケージ単位ですが、実行時処理はカード詳細とタップ確認Activityの券面Viewに限定します。TapAndPayの決済API、NFC/HCE、認証や取引データには触れません。実決済を起動するテストは禁止です。scopeを変えた場合はAPKを更新し、Wallet/GMSプロセスだけ再起動します。端末再起動は不要です。
+GMS scopeはパッケージ単位ですが、Activityフックは `.ui` プロセスに限定します。`TpHceService`、TapAndPay API、NFC/HCE、認証や取引データには触れません。実決済を起動するテストは禁止です。scopeを変えた場合はAPKを更新し、Wallet/GMSプロセスだけ再起動します。端末再起動は不要です。
 
 ## データと画像
 

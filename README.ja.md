@@ -38,11 +38,11 @@ Google Walletのカード券面をカードごとにカスタマイズする、M
 ## 対応範囲
 
 - Wallet: `com.google.android.apps.walletnfcrel` — `26.37.981219770`
-- GMSカード詳細とタップ確認: `PayActivity` のカード詳細アクション、および `TapActivity` / `TAP_EVENT` の表示券面だけを置換（GMS scopeが必要）。タップ確認はWallet側の選択情報・表示ラベルでカードを照合し、決済処理には介入しません。
+- GMSカード詳細とタップ確認: 正確な `PayActivity` 詳細アクション、および `TapActivity` / `TAP_EVENT` の表示券面だけを置換（GMS scopeが必要）。Activityフックは `com.google.android.gms.ui` のみに限定し、GMS/HCE本体プロセスには入れません。
 - LSPosed Modern API: 102+
 - 設定アプリ: 日本語・英語。Android 13以降のアプリごとの言語設定にも対応。
 
-WalletとGMSは静的scopeとしてAPKに同梱します。GMSはプロセス単位でscopeに入りますが、実行時フックは対象のPayActivityに限定し、Google Play servicesの他の画面・決済処理には適用しません。
+WalletとGMSは静的scopeとしてAPKに同梱します。GMSはパッケージ単位でscopeに入りますが、Activityフックは観測済みの `.ui` プロセス内で正確な詳細・タップ確認アクションだけに限定します。TapAndPay、HCE、NFCサービスはフックしません。
 
 ## ビルド
 

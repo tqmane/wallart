@@ -32,6 +32,7 @@ public final class WalletModule extends XposedModule {
     private static final String GMS_CARD_DETAIL_ACTION =
             "com.google.android.gms.pay.secard.view.detail.VIEW_SE_MFI_PREPAID_CARD_DETAIL";
     private static final String GMS_FOP_DETAIL_ACTION = "com.google.android.gms.pay.fops.VIEW_FOP";
+    private static final String GMS_UI_PROCESS = com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE + ".ui";
     private static final String GMS_TAP_ACTIVITY_CLASS = "com.google.android.gms.tapandpay.tap.TapActivity";
     private static final String GMS_TAP_ACTION = "com.google.android.gms.tapandpay.tap.TAP_EVENT";
     private final Set<ClassLoader> hookedClassLoaders = Collections.newSetFromMap(new WeakHashMap<>());
@@ -76,7 +77,8 @@ public final class WalletModule extends XposedModule {
             hookActivityResumeFallback();
             hookWalletSelectionFallback();
             installFor(param.getDefaultClassLoader());
-        } else if (com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(param.getPackageName())) {
+        } else if (com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(param.getPackageName())
+                && isGooglePlayServicesUiProcess()) {
             hookActivityCreateFallback();
             hookActivityResumeFallback();
             hookActivityPauseFallback();
@@ -95,7 +97,8 @@ public final class WalletModule extends XposedModule {
             hookActivityResumeFallback();
             hookWalletSelectionFallback();
             installFor(param.getClassLoader());
-        } else if (com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(param.getPackageName())) {
+        } else if (com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE.equals(param.getPackageName())
+                && isGooglePlayServicesUiProcess()) {
             hookActivityCreateFallback();
             hookActivityResumeFallback();
             hookActivityPauseFallback();
@@ -121,16 +124,16 @@ public final class WalletModule extends XposedModule {
     }
 
     private boolean isGooglePlayServicesProcess(String processName) {
-        String packageName = com.tqmane.wallart.storage.CardStore.GOOGLE_PAY_PACKAGE;
-        if (processName != null && processName.startsWith(packageName)) return true;
-        if (Build.VERSION.SDK_INT >= 28) {
-            try {
-                return packageName.equals(Application.getProcessName());
-            } catch (Throwable ignored) {
-                return false;
-            }
+        return GMS_UI_PROCESS.equals(processName);
+    }
+
+    private boolean isGooglePlayServicesUiProcess() {
+        if (Build.VERSION.SDK_INT < 28) return false;
+        try {
+            return isGooglePlayServicesProcess(Application.getProcessName());
+        } catch (Throwable ignored) {
+            return false;
         }
-        return false;
     }
 
     private boolean isGooglePayDetailActivity(Activity activity) {

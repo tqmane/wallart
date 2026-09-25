@@ -271,9 +271,7 @@ final class CardArtRuntime {
                 RoundedBitmapDrawable overlay = RoundedBitmapDrawableFactory.create(activity.getResources(), fitted);
                 overlay.setAntiAlias(true);
                 overlay.setCornerRadius(artHeight * 0.065f);
-                int artworkWidth = Math.min(artWidth, Math.round(artHeight * 700f / 440f));
-                int inset = (artWidth - artworkWidth) / 2;
-                overlay.setBounds(inset, 0, inset + artworkWidth, artHeight);
+                overlay.setBounds(0, 0, artWidth, artHeight);
                 artView.post(() -> {
                     if (!googlePayDetailActive || googlePayActivity.get() != activity || activity.isFinishing()) return;
                     synchronized (GOOGLE_PAY_OVERLAYS) {
